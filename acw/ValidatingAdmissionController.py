@@ -2,8 +2,12 @@
 
 from flask import Flask, request, abort
 import json
-
+import logging
 app = Flask(__name__)
+
+# 设置日志配置
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def is_forbidden_delete(resource_type, resource_name):
     forbidden_resources = [
@@ -18,9 +22,13 @@ def is_forbidden_delete(resource_type, resource_name):
         {
             "type": "secrets",
             "name": "jam-objectstore-sm-service-binding"
+        },
+        {
+            "type": "pods",
+            "name": "elasticsearch7-jam-0"
         }
     ]
-    
+
     for forbidden_resource in forbidden_resources:
         if resource_type == forbidden_resource["type"] and resource_name == forbidden_resource["name"]:
             return True
@@ -29,13 +37,15 @@ def is_forbidden_delete(resource_type, resource_name):
 @app.route("/validate-delete-resource", methods=["POST"])
 def validate_delete_resource():
     admission_request = json.loads(request.data)
-    
+    # 打印来访请求的详细信息
+    logger.info("Received incoming request: %s", admission_request)
+
     # 检查请求类型是否为删除操作
     if admission_request["request"]["operation"] == "DELETE":
         # 获取要删除的资源类型和名称
         resource_type = admission_request["request"]["kind"]["kind"]
         resource_name = admission_request["request"]["name"]
-        
+
         # 检查是否为禁止删除的资源
         if is_forbidden_delete(resource_type, resource_name):
             admission_response = {
@@ -50,7 +60,7 @@ def validate_delete_resource():
                 }
             }
             return json.dumps(admission_response)
-    
+
     # 允许其他操作
     admission_response = {
         "apiVersion": "admission.k8s.io/v1",
