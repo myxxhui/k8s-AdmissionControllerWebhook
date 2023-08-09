@@ -1,0 +1,12 @@
+FROM python:slim-bullseye
+COPY acw   /usr/src/
+RUN  SRC_PATH=/usr/src/acw   \
+     uid=$(stat --format="%u" "${SRC_PATH}") \
+     gid=$(stat --format="%g" "${SRC_PATH}") \
+     echo "acw:x:${uid}:${gid}::${SRC_PATH}:/bin/bash" >>/etc/passwd   \
+     echo "acw:*:::::::" >>/etc/shadow  \
+     echo "acw       ALL=(ALL)       NOPASSWD: ALL" >>/etc/sudoers \
+RUN  pip install --upgrade pip &&\
+     pip install flask
+WORKDIR /usr/src/
+CMD ["su acw -c "python3    /usr/src/acw/ValidatingAdmissionController.py "]
